@@ -4,10 +4,10 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from typing import List, Set
 
-from app.database import get_db
-from app.models import Room, Film, User
-from app.schemas import RecommendationResponse, RecommendationItem, MemberMatch, FilmOut
-from app.auth import get_current_user
+from app.core.database import get_db
+from app.models.models import Room, Film, User
+from app.schemas.schemas import RecommendationResponse, RecommendationItem, MemberMatch, FilmOut
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/api/rooms", tags=["Recommendations"])
 
@@ -78,7 +78,6 @@ async def get_recommendations(
 
         avg_multiplier = multipliers_sum / members_count
         group_score = round(film.rating * avg_multiplier, 2)
-        least_misery_score = calculate_least_misery(film, members)
 
         discussion_recs.append(RecommendationItem(
             film=FilmOut.model_validate(film),
@@ -118,7 +117,6 @@ async def get_recommendations(
 
         avg_multiplier = multipliers_sum / members_count
         group_score = round(film.rating * avg_multiplier, 2)
-        least_misery_score = calculate_least_misery(film, members)
 
         smart_recs.append(RecommendationItem(
             film=FilmOut.model_validate(film),

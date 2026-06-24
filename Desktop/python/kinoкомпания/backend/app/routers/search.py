@@ -2,14 +2,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.database import get_db
-from app.models import Film
-from app.schemas import SearchQuery, FilmOut
-from app.auth import get_current_user
-from app.ml_service import get_text_embedding, rank_films_by_similarity
+from app.core.database import get_db
+from app.models.models import Film
+from app.schemas.schemas import SearchQuery, FilmOut
+from app.core.auth import get_current_user
+from app.ml.ml_service import get_text_embedding, rank_films_by_similarity
 
 router = APIRouter(prefix="/search", tags=["Search"])
-
 
 @router.post("", response_model=list[FilmOut])
 async def search_films(
@@ -21,7 +20,6 @@ async def search_films(
     if not query_text:
         return []
 
-    # TEXT SEARCH
     if payload.type == "title":
         result = await db.execute(
             select(Film).where(
@@ -31,7 +29,6 @@ async def search_films(
         )
         return result.scalars().all()
 
-    # SEMANTIC SEARCH
     query_vector = get_text_embedding(query_text)
 
     result = await db.execute(select(Film))

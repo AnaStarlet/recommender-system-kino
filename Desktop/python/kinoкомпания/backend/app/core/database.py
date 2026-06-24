@@ -1,13 +1,11 @@
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-import os
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+asyncpg://postgres:secret_password_1337@localhost:5432/kinodb"
 )
-
-print("DATABASE_URL =", DATABASE_URL)
 
 engine = create_async_engine(
     DATABASE_URL,

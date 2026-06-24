@@ -3,7 +3,8 @@ import datetime
 from sqlalchemy import Column, String, Float, Integer, ForeignKey, DateTime, JSON, Table, Boolean, Text
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
-from app.database import Base
+
+from app.core.database import Base
 
 room_members = Table(
     "room_members",
@@ -30,6 +31,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     favorite_genres = Column(JSON, default=[])
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
     rooms_created = relationship("Room", back_populates="creator")
     joined_rooms = relationship("Room", secondary=room_members, back_populates="members")
     ratings = relationship("Rating", back_populates="user")
@@ -42,6 +44,7 @@ class Room(Base):
     creator_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     is_active = Column(Boolean, default=True)
+
     creator = relationship("User", back_populates="rooms_created")
     members = relationship("User", secondary=room_members, back_populates="joined_rooms")
     films = relationship("Film", secondary=room_films, back_populates="rooms")
@@ -59,6 +62,7 @@ class Film(Base):
     poster_url = Column(String)
     tags = Column(JSON, default=[])
     vector = Column(Vector(384))
+
     rooms = relationship("Room", secondary=room_films, back_populates="films")
     ratings = relationship("Rating", back_populates="film")
 
@@ -70,6 +74,7 @@ class Rating(Base):
     film_id = Column(String, ForeignKey("films.id", ondelete="CASCADE"), nullable=False)
     score = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
     user = relationship("User", back_populates="ratings")
     room = relationship("Room", back_populates="ratings")
     film = relationship("Film", back_populates="ratings")

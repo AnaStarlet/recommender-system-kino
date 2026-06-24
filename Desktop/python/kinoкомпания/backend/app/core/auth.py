@@ -7,10 +7,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 
-from app.database import get_db
-from app.models import User
+from app.core.database import get_db
+from app.models.models import User
 
 SECRET_KEY = os.getenv("JWT_SECRET", "super_secret_coursework_key_9999")
 ALGORITHM = "HS256"
@@ -20,15 +19,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Проверить правильность введенного пароля."""
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Сгенерировать безопасный bcrypt-хэш пароля."""
     return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Сформировать JWT-токен авторизации."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -39,10 +35,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), 
+    token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """Зависимость для FastAPI, возвращающая текущего авторизованного пользователя."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Не удалось верифицировать учетные данные",
@@ -55,12 +50,9 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-        
-    query = select(User).where(User.email == email)
-    result = await db.execute(query)
+
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
-    
     if user is None:
         raise credentials_exception
-        
     return user

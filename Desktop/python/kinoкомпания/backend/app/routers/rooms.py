@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.database import get_db
-from app.models import User, Room, Film, room_members, room_films, Rating
-from app.schemas import RoomCreate, RoomJoin, RoomOut, FilmAddRequest, RatingCreate
-from app.auth import get_current_user
+from app.core.database import get_db
+from app.models.models import User, Room, Film, room_members, room_films, Rating
+from app.schemas.schemas import RoomCreate, RoomJoin, RoomOut, FilmAddRequest, RatingCreate
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/api/rooms", tags=["Rooms"])
 
@@ -18,9 +18,9 @@ def generate_code() -> str:
 
 @router.post("/create", response_model=RoomOut, status_code=status.HTTP_201_CREATED)
 async def create_room(
-        data: RoomCreate,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+    data: RoomCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     code = generate_code()
     while True:
@@ -42,25 +42,20 @@ async def create_room(
     await db.commit()
 
     result = await db.execute(
-        select(Room)
-        .options(selectinload(Room.members))
-        .where(Room.id == room.id)
+        select(Room).options(selectinload(Room.members)).where(Room.id == room.id)
     )
     return result.scalar_one()
 
 @router.post("/join", response_model=RoomOut)
 async def join_room(
-        data: RoomJoin,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+    data: RoomJoin,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(
-        select(Room)
-        .options(selectinload(Room.members))
-        .where(Room.code == data.code.upper())
+        select(Room).options(selectinload(Room.members)).where(Room.code == data.code.upper())
     )
     room = result.scalar_one_or_none()
-
     if not room:
         raise HTTPException(status_code=404, detail="Комната не найдена")
 
@@ -70,9 +65,7 @@ async def join_room(
         await db.commit()
 
         result = await db.execute(
-            select(Room)
-            .options(selectinload(Room.members))
-            .where(Room.id == room.id)
+            select(Room).options(selectinload(Room.members)).where(Room.id == room.id)
         )
         room = result.scalar_one()
 
@@ -80,34 +73,9 @@ async def join_room(
 
 @router.get("/{code}", response_model=RoomOut)
 async def get_room(
-        code: str,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
-):
-    result = await db.execute(
-        select(Room)
-        .options(
-            selectinload(Room.members),
-            selectinload(Room.films)
-        )
-        .where(Room.code == code.upper())
-    )
-    room = result.scalar_one_or_none()
-
-    if not room:
-        raise HTTPException(status_code=404, detail="Комната не найдена")
-
-    if current_user not in room.members:
-        raise HTTPException(status_code=403, detail="Доступ запрещен")
-
-    return room
-
-@router.post("/{code}/films", response_model=RoomOut)
-async def add_film_to_room(
-        code: str,
-        data: FilmAddRequest,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+    code: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(
         select(Room)
@@ -115,25 +83,38 @@ async def add_film_to_room(
         .where(Room.code == code.upper())
     )
     room = result.scalar_one_or_none()
-
     if not room:
         raise HTTPException(status_code=404, detail="Комната не найдена")
-
     if current_user not in room.members:
         raise HTTPException(status_code=403, detail="Доступ запрещен")
+    return room
+
+@router.post("/{code}/films", response_model=RoomOut)
+async def add_film_to_room(
+    code: str,
+    data: FilmAddRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Room)
+        .options(selectinload(Room.members), selectinload(Room.films))
+        .where(Room.code == code.upper())
+    )
+    room = result.scalar_one_or_none()
+    if not room:
+        raise HTTPException(status_code=404, detail="Комната не найдена")
+    if current_user not in room.members:
+        raise HTTPException(status_code=403, detail="Доступ запрещен")
+
     film_result = await db.execute(select(Film).where(Film.id == data.film_id))
     film = film_result.scalar_one_or_none()
     if not film:
         raise HTTPException(status_code=404, detail="Фильм не найден")
-
     if film in room.films:
         raise HTTPException(status_code=400, detail="Фильм уже добавлен")
 
-    stmt = room_films.insert().values(
-        room_id=room.id,
-        film_id=film.id,
-        added_by=current_user.id
-    )
+    stmt = room_films.insert().values(room_id=room.id, film_id=film.id, added_by=current_user.id)
     await db.execute(stmt)
     await db.commit()
 
@@ -146,21 +127,17 @@ async def add_film_to_room(
 
 @router.post("/{code}/rate")
 async def rate_film(
-        code: str,
-        data: RatingCreate,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+    code: str,
+    data: RatingCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(
-        select(Room)
-        .options(selectinload(Room.members))
-        .where(Room.code == code.upper())
+        select(Room).options(selectinload(Room.members)).where(Room.code == code.upper())
     )
     room = result.scalar_one_or_none()
-
     if not room:
         raise HTTPException(status_code=404, detail="Комната не найдена")
-
     if current_user not in room.members:
         raise HTTPException(status_code=403, detail="Доступ запрещен")
 
@@ -177,18 +154,16 @@ async def rate_film(
     )
     db.add(rating)
     await db.commit()
-
     return {"success": True, "message": "Оценка сохранена"}
 
 @router.post("/{code}/leave")
 async def leave_room(
-        code: str,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+    code: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(select(Room).where(Room.code == code.upper()))
     room = result.scalar_one_or_none()
-
     if not room:
         raise HTTPException(status_code=404, detail="Комната не найдена")
 

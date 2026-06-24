@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.database import get_db
-from app.models import User
-from app.schemas import UserRegister, UserLogin, UserOut
-from app.auth import (
+from app.core.database import get_db
+from app.models.models import User
+from app.schemas.schemas import UserRegister, UserLogin, UserOut
+from app.core.auth import (
     get_password_hash,
     verify_password,
     create_access_token,
@@ -20,9 +20,9 @@ async def register(
         user_data: UserRegister,
         db: AsyncSession = Depends(get_db)
 ):
-    query = select(User).where(User.email == user_data.email.lower())
-    result = await db.execute(query)
-
+    result = await db.execute(
+        select(User).where(User.email == user_data.email.lower())
+    )
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -35,7 +35,6 @@ async def register(
         password_hash=get_password_hash(user_data.password),
         favorite_genres=user_data.favorite_genres
     )
-
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
@@ -53,27 +52,19 @@ async def login(
         credentials: UserLogin,
         db: AsyncSession = Depends(get_db)
 ):
-    query = select(User).where(User.email == credentials.email.lower())
-    result = await db.execute(query)
+    result = await db.execute(
+        select(User).where(User.email == credentials.email.lower())
+    )
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(
-            credentials.password,
-            user.password_hash
-    ):
+    if not user or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный email или пароль"
         )
 
-    access_token = create_access_token(
-        data={"sub": user.email}
-    )
-
-    return {
-        "token": access_token,
-        "token_type": "bearer"
-    }
+    access_token = create_access_token(data={"sub": user.email})
+    return {"token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserOut)
