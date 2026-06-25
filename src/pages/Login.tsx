@@ -34,7 +34,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     try {
       if (isRegister) {
-        // Валидация на фронтенде
         if (!name.trim()) {
           throw new Error("Введите имя (минимум 2 символа)");
         }
@@ -75,7 +74,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           email: email.trim(),
           password,
         });
-        // ✅ ФИКС: Бекенд возвращает только token, создаем user из email
         const user = {
           id: email.trim(),
           name: email.trim().split("@")[0],
@@ -85,13 +83,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         onLoginSuccess(user, data.token);
       }
     } catch (err: any) {
-      // Детальная обработка ошибок от сервера
       console.error("[LOGIN ERROR]", err);
 
       let errorMessage = "Произошла неизвестная ошибка";
 
       if (err.response?.data?.detail) {
-        // Ошибка от FastAPI
         const detail = err.response.data.detail;
         if (typeof detail === "string") {
           errorMessage = detail;
@@ -101,7 +97,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           errorMessage = JSON.stringify(detail);
         }
       } else if (err.message) {
-        // Ошибка от фронтенда или сети
         if (err.message.includes("Network Error") || err.message.includes("ERR_CONNECTION_REFUSED")) {
           errorMessage = "Не удалось подключиться к серверу. Убедитесь, что бекенд запущен на порту 8000.";
         } else {
@@ -128,7 +123,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-600 p-3 rounded-xl text-xs mb-6">
-            ⚠️ {error}
+              {error}
           </div>
         )}
 
