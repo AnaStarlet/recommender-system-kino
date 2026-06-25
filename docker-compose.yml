@@ -1,0 +1,40 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: kino_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret_password_1337
+      POSTGRES_DB: kinodb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kino_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+        DATABASE_URL: postgresql+asyncpg://postgres:secret_password_1337@db:5432/kinodb
+        JWT_SECRET: super_secret_coursework_key_9999
+        TMDB_API_KEY: 3d90de89ce3f3d998b1704f349cba442
+        TMDB_ACCESS_TOKEN: eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzZDkwZGU4OWNlM2YzZDk5OGIxNzA0ZjM0OWNiYTQ0MiIsIm5iZiI6MTc4MjI0ODg1MC45MzkwMDAxLCJzdWIiOiI2YTNhZjU5MjllOTYzNTUwOWUzY2UyYzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.Hm_zeoNBjp7mUeH36TEngn5B0Asuhq-cd4HLBQ-O2D8
+        GEMINI_API_KEY: AQ.Ab8RN6JdxcchUnlQH49tJ5-jhe-qjvyNqPYRnwkgObmI7_eAjQ
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
