@@ -41,7 +41,6 @@ async def create_room(
     await db.execute(stmt)
     await db.commit()
 
-    # ✅ ВАЖНО: Загрузить комнату с связанными данными
     result = await db.execute(
         select(Room)
         .options(selectinload(Room.members), selectinload(Room.films))
