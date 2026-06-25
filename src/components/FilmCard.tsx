@@ -9,7 +9,7 @@ interface FilmCardProps {
   onRemove?: (id: string) => void;
   isAddedInRoom?: boolean;
   addedBy?: string;
-  matchScore?: number; // Итоговый групповой рейтинг (если рассчитывается)
+  matchScore?: number; 
   hasDetails?: boolean;
   memberMatches?: Array<{
     userName: string;
@@ -36,7 +36,7 @@ export const FilmCard: React.FC<FilmCardProps> = ({
       whileHover={{ y: -4 }}
       className="relative flex flex-col h-full bg-[#0f1115]/90 border border-white/10 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md transition-all duration-300 hover:border-amber-500/50"
     >
-      {/* Иконка / Бейдж Года и Рейтинга поверх постера */}
+      {/* Иконка /  */}
       <div className="relative h-60 w-full overflow-hidden bg-[#0a0b0d]">
         <img
           src={film.posterUrl || "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=500&q=80"}
