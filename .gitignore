@@ -25,4 +25,8 @@ database.json
 .dockerignore
 
 *.log
+<<<<<<< HEAD
 logs/
+=======
+logs/
+>>>>>>> 8275bb3e437b306499c0aa0e32016550b14bcd23
