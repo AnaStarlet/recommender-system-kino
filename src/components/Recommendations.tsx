@@ -53,7 +53,6 @@ export const Recommendations: React.FC<RecommendationsProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* ИИ ВЕРДИКТ И СОВЕТЫ НА ВЕЧЕР */}
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -96,7 +95,6 @@ export const Recommendations: React.FC<RecommendationsProps> = ({
         </div>
       </motion.div>
 
-      {/* ТОП-5 ИЗ ОБСУЖДЕНИЯ */}
       <div className="space-y-4">
         <div className="flex items-end justify-between border-b border-white/10 pb-3">
           <div className="space-y-1">
@@ -129,7 +127,6 @@ export const Recommendations: React.FC<RecommendationsProps> = ({
             <AnimatePresence mode="popLayout">
               {discussionRecommendations.map((item, index) => (
                 <div key={item.film.id} className="relative">
-                  {/* Позиция фильма */}
                   <div className="absolute -top-3 -left-3 z-10 w-8 h-8 rounded-full bg-[#0a0b0d] border border-white/10 flex items-center justify-center font-display font-black text-xs text-amber-500 shadow-xl">
                     #{index + 1}
                   </div>
@@ -148,7 +145,6 @@ export const Recommendations: React.FC<RecommendationsProps> = ({
         )}
       </div>
 
-      {/* УМНЫЙ АВТОПОДБОР ИЗ КАТАЛОГА */}
       <div className="space-y-4">
         <div className="space-y-1 border-b border-white/10 pb-3">
           <div className="flex items-center gap-2">
