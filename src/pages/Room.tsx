@@ -28,7 +28,6 @@ export const Room: React.FC<RoomProps> = ({ currentUser, onLogOut }) => {
   const [searchType, setSearchType] = useState<"title" | "phrase">("phrase");
   const [expandedFilm, setExpandedFilm] = useState<string | null>(null);
 
-  // 🔥 КЭШ ВСЕХ ФИЛЬМОВ ИЗ КАТАЛОГА
   const [catalogFilms, setCatalogFilms] = useState<any[]>([]);
 
   const [showWatchModal, setShowWatchModal] = useState(false);
@@ -36,7 +35,6 @@ export const Room: React.FC<RoomProps> = ({ currentUser, onLogOut }) => {
   const [isWatching, setIsWatching] = useState(false);
   const [currentWatchUrl, setCurrentWatchUrl] = useState("");
 
-  // 🔥 ЗАГРУЖАЕМ КАТАЛОГ ФИЛЬМОВ ПРИ ВХОДЕ В КОМНАТУ
   useEffect(() => {
     const loadCatalog = async () => {
       try {
@@ -253,18 +251,15 @@ export const Room: React.FC<RoomProps> = ({ currentUser, onLogOut }) => {
     setExpandedFilm(expandedFilm === filmId ? null : filmId);
   };
 
-  // Проверяем, добавлен ли фильм в комнату
   const isFilmInRoom = (filmId: string) => {
     return activeRoom?.films?.some((rf: any) => rf.filmId === filmId) || false;
   };
 
-  // Получаем информацию о том, кто добавил фильм
   const getFilmAddedBy = (filmId: string) => {
     const roomFilm = activeRoom?.films?.find((rf: any) => rf.filmId === filmId);
     return roomFilm?.addedByName || null;
   };
 
-  // Находим фильм в каталоге по ID
   const findFilmInCatalog = (filmId: string) => {
     return catalogFilms.find(f => f.id === filmId) || searchResults.find(f => f.id === filmId);
   };
@@ -376,7 +371,7 @@ export const Room: React.FC<RoomProps> = ({ currentUser, onLogOut }) => {
                 <span>{member.name} {member.userId === currentUser.id && "(вы)"}</span>
                 {member.favoriteGenres?.length > 0 && (
                   <span className="text-xs text-gray-400 ml-2">
-                    ❤️ {member.favoriteGenres.join(", ")}
+                      {member.favoriteGenres.join(", ")}
                   </span>
                 )}
               </div>
@@ -448,10 +443,10 @@ export const Room: React.FC<RoomProps> = ({ currentUser, onLogOut }) => {
                           }}
                         />
                         <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold text-amber-400 border border-amber-500/30">
-                          ⭐ {film.rating?.toFixed(1) || 'N/A'}
+                            {film.rating?.toFixed(1) || 'N/A'}
                         </div>
                         <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs text-white">
-                          📅 {film.releaseYear || 'N/A'}
+                            {film.releaseYear || 'N/A'}
                         </div>
                         {added && (
                           <div className="absolute top-2 left-2 bg-green-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs text-white font-bold flex items-center gap-1">
