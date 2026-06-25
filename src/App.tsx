@@ -29,7 +29,7 @@ export default function App() {
   }, []);
 
   const handleLoginSuccess = (user: any, token: string) => {
-  console.log("[LOGIN SUCCESS]", { user, token });  // ← ДОБАВЬТЕ ДЛЯ ОТЛАДКИ
+  console.log("[LOGIN SUCCESS]", { user, token });
   localStorage.setItem("kino_token", token);
   setCurrentUser(user);
 };
