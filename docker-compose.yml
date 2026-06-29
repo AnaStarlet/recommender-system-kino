@@ -1,7 +1,7 @@
 services:
-  db:
-    image: pgvector/pgvector:pg17
-    container_name: kino_db
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: kinodb_postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret_password_1337
@@ -9,32 +9,36 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - pgdata:/var/lib/postgresql/data
+    command: >
+      sh -c "
+        docker-entrypoint.sh postgres &
+        sleep 5 &&
+        psql -U postgres -d kinodb -c 'CREATE EXTENSION IF NOT EXISTS vector;' &&
+        wait
+      "
 
-  app:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: kino_app
+  backend:
+    build: ./backend
+    container_name: kinodb_backend
     ports:
       - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-        DATABASE_URL: postgresql+asyncpg://postgres:secret_password_1337@db:5432/kinodb
-        JWT_SECRET: super_secret_coursework_key_9999
-        TMDB_API_KEY: 3d90de89ce3f3d998b1704f349cba442
-        TMDB_ACCESS_TOKEN: eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzZDkwZGU4OWNlM2YzZDk5OGIxNzA0ZjM0OWNiYTQ0MiIsIm5iZiI6MTc4MjI0ODg1MC45MzkwMDAxLCJzdWIiOiI2YTNhZjU5MjllOTYzNTUwOWUzY2UyYzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.Hm_zeoNBjp7mUeH36TEngn5B0Asuhq-cd4HLBQ-O2D8
-        GEMINI_API_KEY: AQ.Ab8RN6JdxcchUnlQH49tJ5-jhe-qjvyNqPYRnwkgObmI7_eAjQ
+      - DATABASE_URL=postgresql+asyncpg://postgres:secret_password_1337@postgres:5432/kinodb
+      - GEMINI_API_KEY=AQ.Ab8RN6JiHu9r08yqkn_iOsgQeyqoM0Vr9cd86rtj-Hh4FQUHtQ
+    depends_on:
+      - postgres
     volumes:
-      - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./backend/app:/app/app
+
+  frontend:
+    build: ./frontend
+    container_name: kinodb_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    stdin_open: true
 
 volumes:
-  postgres_data:
+  pgdata:

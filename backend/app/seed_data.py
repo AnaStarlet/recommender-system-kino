@@ -9,7 +9,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '../..', '.env'))
 
 from app.core.database import AsyncSessionLocal, engine, Base
 from app.models.models import Film
-from app.ml.ml_service import get_text_embedding
+from app.ml.ml_service import ml_service
 
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "3d90de89ce3f3d998b1704f349cba442")
 
@@ -40,9 +40,10 @@ async def seed_movies_from_tmdb():
         await conn.run_sync(Base.metadata.create_all)
 
     films_to_add = []
+    seen_ids = set()
     page = 1
-    max_pages = 30
-    target_films = 500
+    max_pages = 100
+    target_films = 2000
 
     while len(films_to_add) < target_films and page <= max_pages:
         url = f"https://api.themoviedb.org/3/movie/popular?api_key={TMDB_API_KEY}&language=ru-RU&page={page}"
@@ -66,6 +67,11 @@ async def seed_movies_from_tmdb():
                     break
 
                 movie_id = str(movie.get("id"))
+
+                if movie_id in seen_ids:
+                    continue
+                seen_ids.add(movie_id)
+
                 title = movie.get("title")
                 overview = movie.get("overview")
                 release_date = movie.get("release_date", "2024-01-01")
@@ -77,7 +83,7 @@ async def seed_movies_from_tmdb():
 
                 genres = clean_genres(movie.get("genre_ids", []))
                 poster_path = movie.get("poster_path")
-                poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+                poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
 
                 tags = []
                 tag_keywords = {
@@ -96,20 +102,19 @@ async def seed_movies_from_tmdb():
                 tags.extend([g.lower() for g in genres])
                 tags = list(set(tags))[:8]
 
-                text_to_vectorize = f"{title} {', '.join(genres)} {overview} {', '.join(tags)}"
-                vector = get_text_embedding(text_to_vectorize)
+                text_for_embedding = f"{title} {overview} {genres} {tags}"
+                embedding = ml_service.get_embedding(text_for_embedding)
 
                 film_entry = {
                     "id": movie_id,
                     "title": title,
-                    "original_title": movie.get("original_title", title),
-                    "genres": genres,
+                    "genres": ", ".join(genres),
                     "description": overview,
-                    "release_year": year,
+                    "year": year,
                     "rating": rating,
+                    "tags": ", ".join(tags),
                     "poster_url": poster_url,
-                    "tags": tags,
-                    "vector": vector
+                    "embedding": embedding
                 }
                 films_to_add.append(film_entry)
                 print(f"[SEED] Загружен: {title} ({year})")
@@ -131,20 +136,23 @@ async def seed_movies_from_tmdb():
                 db_film = Film(
                     id=f["id"],
                     title=f["title"],
-                    original_title=f["original_title"],
                     genres=f["genres"],
                     description=f["description"],
-                    release_year=f["release_year"],
+                    year=f["year"],
                     rating=f["rating"],
-                    poster_url=f["poster_url"],
                     tags=f["tags"],
-                    vector=f["vector"]
+                    poster_url=f["poster_url"],
+                    embedding=f["embedding"]
                 )
                 session.add(db_film)
                 added_count += 1
 
+                if added_count % 10 == 0:
+                    await session.commit()
+                    print(f"[SEED] Добавлено {added_count} фильмов...")
+
             await session.commit()
-            print(f"[SEED SUCCESS] Загружено {added_count} фильмов! Всего: {len(films_to_add)}")
+            print(f"[SEED SUCCESS] Загружено {added_count} фильмов!")
     else:
         print("[SEED ERROR] Не удалось загрузить фильмы.")
 

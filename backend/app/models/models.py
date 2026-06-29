@@ -1,80 +1,64 @@
-import uuid
-import datetime
-from sqlalchemy import Column, String, Float, Integer, ForeignKey, DateTime, JSON, Table, Boolean, Text
+from sqlalchemy import Column, String, Integer, Float, Table, ForeignKey, JSON, DateTime
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
+from datetime import datetime
+import uuid
 
 from app.core.database import Base
 
 room_members = Table(
-    "room_members",
+    'room_members',
     Base.metadata,
-    Column("room_id", String, ForeignKey("rooms.id", ondelete="CASCADE"), primary_key=True),
-    Column("user_id", String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-    Column("joined_at", DateTime, default=datetime.datetime.utcnow)
-)
-
-room_films = Table(
-    "room_films",
-    Base.metadata,
-    Column("room_id", String, ForeignKey("rooms.id", ondelete="CASCADE"), primary_key=True),
-    Column("film_id", String, ForeignKey("films.id", ondelete="CASCADE"), primary_key=True),
-    Column("added_by", String, ForeignKey("users.id", ondelete="SET NULL")),
-    Column("added_at", DateTime, default=datetime.datetime.utcnow)
+    Column('room_id', String, ForeignKey('rooms.id', ondelete='CASCADE'), primary_key=True),
+    Column('user_id', String, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
 )
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    favorite_genres = Column(JSON, default=[])
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    favorite_genres = Column(JSON, default=list)
 
-    rooms_created = relationship("Room", back_populates="creator")
-    joined_rooms = relationship("Room", secondary=room_members, back_populates="members")
-    ratings = relationship("Rating", back_populates="user")
+    rooms = relationship("Room", secondary=room_members, back_populates="members")
 
 class Room(Base):
     __tablename__ = "rooms"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    code = Column(String(5), unique=True, index=True, nullable=False)
-    name = Column(String, nullable=False)
-    creator_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    is_active = Column(Boolean, default=True)
 
-    creator = relationship("User", back_populates="rooms_created")
-    members = relationship("User", secondary=room_members, back_populates="joined_rooms")
-    films = relationship("Film", secondary=room_films, back_populates="rooms")
-    ratings = relationship("Rating", back_populates="room")
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    code = Column(String, unique=True, nullable=False, index=True)
+    creator_id = Column(String, ForeignKey("users.id"))
+    current_video_url = Column(String, default="")
+    films = Column(JSON, default=list)
+    ai_analysis = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    members = relationship("User", secondary=room_members, back_populates="rooms", lazy="selectin")
+    messages = relationship("Message", back_populates="room", cascade="all, delete-orphan")
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    room_id = Column(String, ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    room = relationship("Room", back_populates="messages")
 
 class Film(Base):
     __tablename__ = "films"
-    id = Column(String, primary_key=True)
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
-    original_title = Column(String)
-    genres = Column(JSON, default=[])
-    description = Column(Text)
-    release_year = Column(Integer)
+    description = Column(String, nullable=False)
     rating = Column(Float, default=0.0)
-    poster_url = Column(String)
-    tags = Column(JSON, default=[])
-    vector = Column(Vector(384))
-
-    rooms = relationship("Room", secondary=room_films, back_populates="films")
-    ratings = relationship("Rating", back_populates="film")
-
-class Rating(Base):
-    __tablename__ = "ratings"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    room_id = Column(String, ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False)
-    film_id = Column(String, ForeignKey("films.id", ondelete="CASCADE"), nullable=False)
-    score = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-    user = relationship("User", back_populates="ratings")
-    room = relationship("Room", back_populates="ratings")
-    film = relationship("Film", back_populates="ratings")
+    year = Column(Integer, default=2024)
+    genres = Column(String, default="")
+    tags = Column(String, default="")
+    poster_url = Column(String, nullable=True)
+    embedding = Column(Vector(384))
