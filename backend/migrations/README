@@ -1,0 +1,16 @@
+Generic single-database configuration.
+/* Показать текущую версию
+alembic current
+
+ Показать историю
+alembic history
+
+ Создать новую миграцию
+alembic revision --autogenerate -m "Описание"
+
+ Применить все миграции
+alembic upgrade head
+
+ Откатить последнюю миграцию
+alembic downgrade -1
+*/
