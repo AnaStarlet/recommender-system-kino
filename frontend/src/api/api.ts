@@ -1,4 +1,4 @@
-const API_BASE = '/api'
+const API_BASE = 'http://localhost:8000/api';
 const getHeaders = () => {
   const token = localStorage.getItem("kino_token");
   return {

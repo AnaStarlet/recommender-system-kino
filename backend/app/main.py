@@ -1,8 +1,11 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.database import engine, Base
 from app.core.websocket import manager
 from app.config import settings
 from app.routers import auth, rooms, search, recommendations, messages, films
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION
@@ -22,6 +25,7 @@ app.include_router(search.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
 app.include_router(films.router, prefix="/api")
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
@@ -35,3 +39,11 @@ async def websocket_endpoint(websocket: WebSocket, code: str):
             await manager.broadcast(data, code)
     except WebSocketDisconnect:
         manager.disconnect(websocket, code)
+
+@app.on_event("startup")
+async def startup():
+    print("[INIT] Creating database tables...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print("[INIT] Database tables created!")
+    print("[INIT] Database ready")

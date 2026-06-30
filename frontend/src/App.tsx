@@ -2,11 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Login } from "./pages/Login";
 import { RoomPage } from "./pages/Room";
 import { User, Room } from "./types";
-import { authApi } from "./api/api";
+import { authApi, roomsApi, filmsApi } from "./api/api";
 import { FilmIcon, LogOut, Plus, Search } from "lucide-react";
 import { motion } from "motion/react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -50,7 +48,7 @@ export default function App() {
     const authToken = tkn || token;
     if (!authToken) return;
     try {
-      const res = await fetch(`${API_BASE}/api/films`, {
+      const res = await fetch(`${API_BASE}/films`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
@@ -88,30 +86,18 @@ export default function App() {
     e.preventDefault();
     if (!newRoomName.trim() || !token) return;
     try {
-      const res = await fetch(`${API_BASE}/api/rooms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: newRoomName })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const room = {
-          ...data,
-          members: data.members || [],
-          chat: [],
-          films: [],
-        };
-        setActiveRoom(room);
-        setNewRoomName("");
-        setSuccessMsg(`Комната "${data.name}" создана! Код: ${data.code}`);
-      } else {
-        setErrorMsg(data.detail || "Не удалось создать комнату");
-      }
-    } catch (err) {
-      setErrorMsg("Ошибка соединения с сервером");
+      const data = await roomsApi.create(newRoomName);
+      const room = {
+        ...data,
+        members: data.members || [],
+        chat: [],
+        films: [],
+      };
+      setActiveRoom(room);
+      setNewRoomName("");
+      setSuccessMsg(`Комната "${data.name}" создана! Код: ${data.code}`);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Не удалось создать комнату");
     }
   };
 
@@ -119,30 +105,18 @@ export default function App() {
     e.preventDefault();
     if (!roomCodeInput.trim() || !token) return;
     try {
-      const res = await fetch(`${API_BASE}/api/rooms/join`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ code: roomCodeInput.toUpperCase() })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const room = {
-          ...data,
-          members: data.members || [],
-          chat: [],
-          films: [],
-        };
-        setActiveRoom(room);
-        setRoomCodeInput("");
-        setSuccessMsg(`Вы присоединились к "${data.name}"!`);
-      } else {
-        setErrorMsg(data.detail || "Комната не найдена");
-      }
-    } catch (err) {
-      setErrorMsg("Ошибка соединения с сервером");
+      const data = await roomsApi.join(roomCodeInput.toUpperCase());
+      const room = {
+        ...data,
+        members: data.members || [],
+        chat: [],
+        films: [],
+      };
+      setActiveRoom(room);
+      setRoomCodeInput("");
+      setSuccessMsg(`Вы присоединились к "${data.name}"!`);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Комната не найдена");
     }
   };
 
@@ -154,26 +128,18 @@ export default function App() {
     }
     setIsSearching(true);
     try {
-      const url = `${API_BASE}/api/search?query=${encodeURIComponent(searchQuery)}&type=title`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const parsed = data.map((f: any) => ({
-          ...f,
-          genres: f.genres ? f.genres.split(',').map((g: string) => g.trim()).filter(Boolean) : [],
-          tags: f.tags ? f.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-          releaseYear: f.year,
-          posterUrl: f.poster_url,
-        }));
-        setFilms(parsed);
-      } else {
-        setErrorMsg("Ошибка при поиске");
-      }
-    } catch (err) {
+      const data = await filmsApi.search(searchQuery, "title");
+      const parsed = data.map((f: any) => ({
+        ...f,
+        genres: f.genres ? f.genres.split(',').map((g: string) => g.trim()).filter(Boolean) : [],
+        tags: f.tags ? f.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        releaseYear: f.year,
+        posterUrl: f.poster_url,
+      }));
+      setFilms(parsed);
+    } catch (err: any) {
       console.error(err);
-      setErrorMsg("Ошибка соединения при поиске");
+      setErrorMsg(err.message || "Ошибка при поиске");
     } finally {
       setIsSearching(false);
     }
