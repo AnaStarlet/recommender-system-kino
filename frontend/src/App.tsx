@@ -48,20 +48,15 @@ export default function App() {
     const authToken = tkn || token;
     if (!authToken) return;
     try {
-      const res = await fetch(`${API_BASE}/films`, {
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const parsed = data.map((f: any) => ({
-          ...f,
-          genres: f.genres ? f.genres.split(',').map((g: string) => g.trim()).filter(Boolean) : [],
-          tags: f.tags ? f.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-          releaseYear: f.year,
-          posterUrl: f.poster_url,
-        }));
-        setFilms(parsed);
-      }
+      const data = await filmsApi.getAll();
+      const parsed = data.map((f: any) => ({
+        ...f,
+        genres: f.genres ? f.genres.split(',').map((g: string) => g.trim()).filter(Boolean) : [],
+        tags: f.tags ? f.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        releaseYear: f.year,
+        posterUrl: f.poster_url,
+      }));
+      setFilms(parsed);
     } catch (err) {
       console.error("Ошибка загрузки каталога:", err);
     }
