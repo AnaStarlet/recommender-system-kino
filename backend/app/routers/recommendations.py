@@ -29,9 +29,9 @@ class RecommendationsResponse(BaseModel):
 @router.post("/rooms/{code}/recommendations/refresh", response_model=RecommendationsResponse)
 @router.get("/rooms/{code}/recommendations", response_model=RecommendationsResponse)
 async def get_room_recommendations(
-        code: str,
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user)
+    code: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
     room_result = await db.execute(select(Room).where(Room.code == code.upper()))
     room = room_result.scalar_one_or_none()

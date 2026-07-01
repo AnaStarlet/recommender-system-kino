@@ -26,7 +26,6 @@ export const RoomPage: React.FC<RoomPageProps> = ({
   activeRoom,
   setActiveRoom,
 }) => {
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
   const token = localStorage.getItem("kino_token");
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,7 +42,73 @@ export const RoomPage: React.FC<RoomPageProps> = ({
   const [allRoomGenres, setAllRoomGenres] = useState<string[]>([]);
 
   const [copiedCode, setCopiedCode] = useState(false);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!activeRoom?.code || !token) return;
+
+    const wsUrl = `ws://localhost:8000/ws/${activeRoom.code}?token=${token}`;
+    const websocket = new WebSocket(wsUrl);
+
+    websocket.onopen = () => {
+      console.log("WebSocket подключен к комнате", activeRoom.code);
+    };
+
+    websocket.onerror = (error) => {
+      console.error("WebSocket ошибка:", error);
+    };
+
+    websocket.onclose = () => {
+      console.log("WebSocket отключен");
+    };
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
+  }, [activeRoom?.code, token]);
+
+  useEffect(() => {
+    if (!ws) return;
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'new_message') {
+          setActiveRoom(prev => {
+            if (!prev) return prev;
+            const newMessage = {
+              id: data.messageId || Date.now().toString(),
+              senderId: data.senderId,
+              senderName: data.senderName,
+              text: data.text,
+              timestamp: data.timestamp || Date.now(),
+            };
+            return {
+              ...prev,
+              chat: [...(prev.chat || []), newMessage]
+            };
+          });
+
+          loadRecommendations();
+        }
+
+        if (data.type === 'video_update') {
+          setActiveRoom(prev => prev ? { ...prev, current_video_url: data.url } : prev);
+        }
+
+        if (data.type === 'members_update') {
+          setActiveRoom(prev => prev ? { ...prev, members: data.members } : prev);
+        }
+      } catch (e) {
+        console.error("Ошибка парсинга WebSocket сообщения:", e);
+      }
+    };
+  }, [ws]);
 
   useEffect(() => {
     if (!activeRoom?.code) return;
@@ -162,30 +227,10 @@ export const RoomPage: React.FC<RoomPageProps> = ({
     setChatInput("");
 
     try {
-      const res = await fetch(`${API_BASE}/api/rooms/${activeRoom.code}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ text: messageText })
-      });
-
-      if (res.ok) {
-        const updatedRoom = await fetch(`${API_BASE}/api/rooms/${activeRoom.code}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const roomData = await updatedRoom.json();
-        setActiveRoom(roomData);
-
-        setTimeout(() => {
-          loadRecommendations();
-        }, 500);
-      } else {
-        console.error("Ошибка отправки");
-      }
+      await roomsApi.postMessage(activeRoom.code, messageText);
     } catch (e) {
       console.error("Ошибка:", e);
+      setChatInput(messageText);
     } finally {
       setIsSendingMessage(false);
     }
