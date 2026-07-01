@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: kinodb_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret_password_1337
+      POSTGRES_DB: kinodb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    command: >
+      sh -c "
+        docker-entrypoint.sh postgres &
+        sleep 5 &&
+        psql -U postgres -d kinodb -c 'CREATE EXTENSION IF NOT EXISTS vector;' &&
+        wait
+      "
+
+  backend:
+    build: ./backend
+    container_name: kinodb_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:secret_password_1337@postgres:5432/kinodb
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    build: ./frontend
+    container_name: kinodb_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    stdin_open: true
+
+volumes:
+  pgdata:
